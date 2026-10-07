@@ -2,7 +2,22 @@
 
 Веб-сэмплер в стиле дрифт-фонка: пэды ковбелла, 808 и ударных, педали эффектов на каждую группу звуков и визуал «аврора», который реагирует на громкость. Все звуки синтезируются в браузере через [Tone.js](https://tonejs.github.io/), аудиофайлы не нужны.
 
-Это минимальный рабочий прототип: один файл `index.html` на HTML, CSS и JavaScript.
+Это минимальный рабочий прототип без сборки. Файлы разложены по структуре «Code beginning»:
+
+```
+index.html            только разметка
+Stylesheets/
+  style.css           точка входа: только @import
+  reset.css           обнуление стилей (Eric Meyer reset v2.0)
+  fonts.css           @font-face для Onest из /fonts
+  layout.css          переменные, базовые стили и все компоненты
+  animation.css       transition и prefers-reduced-motion
+  adaptive.css        медиазапросы
+Javascripts/
+  scripts.js          звук (Tone.js) и вся логика интерфейса
+fonts/                Onest (woff2, лицензия OFL)
+images/               картинки и иконки
+```
 
 ## Как запустить
 

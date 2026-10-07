@@ -1,6 +1,23 @@
 # АП Aurora PHONK
 
-Веб-сэмплер в стиле дрифт-фонка. Стек: HTML + CSS + JavaScript + Tone.js (14.8.49, подключён с jsDelivr). Сборки нет, весь прототип живёт в одном `index.html`.
+Веб-сэмплер в стиле дрифт-фонка. Стек: HTML + CSS + JavaScript + Tone.js (14.8.49, подключён с jsDelivr). Сборки нет. Файлы разложены по скиллу `code-beginning` (`.claude/skills/code-beginning`), соблюдай его правила:
+
+```
+index.html            только разметка
+Stylesheets/
+  style.css           точка входа: только @import
+  reset.css           обнуление стилей (Eric Meyer reset v2.0)
+  fonts.css           @font-face для Onest из /fonts
+  layout.css          переменные, базовые стили и все компоненты
+  animation.css       transition и prefers-reduced-motion
+  adaptive.css        медиазапросы
+Javascripts/
+  scripts.js          звук (Tone.js) и вся логика интерфейса
+fonts/                Onest (woff2, лицензия OFL)
+images/               картинки и иконки
+```
+
+В `index.html` нет `<style>`, `style="…"` и инлайнового JS. Цвет шины задаётся классом `.bus-cow`, `.bus-808`, `.bus-drums`, `.bus-master` (ставит `--c`). Новые CSS-файлы подключаются только через `@import` в `style.css`.
 
 ## Что это
 
@@ -45,4 +62,3 @@
 - Секвенсор или запись лупа.
 - Свои сэмплы (вокальные чопы).
 - Пресеты педалей.
-- Разнести код на `index.html`, `style.css` и `main.js`, когда прототип вырастет.

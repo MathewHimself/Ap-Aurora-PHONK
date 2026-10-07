@@ -1,0 +1,11 @@
+/* Шрифты. Файлы лежат в /fonts, пути относительно этой папки.
+   На каждое начертание — отдельный @font-face. Пример:
+
+@font-face {
+  font-family: "Onest";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/onest-400.woff2") format("woff2");
+}
+*/
