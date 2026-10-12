@@ -1,7 +1,7 @@
 /* Медиазапросы: от больших экранов к маленьким */
 
 @media (max-width: 640px) {
-  .device { padding: 18px; border-radius: 22px; }
+  .device { padding: 18px 0; }
   .visual { height: 520px; }
   .tempo b { font-size: 64px; }
   .glass-grid { gap: 8px; }
