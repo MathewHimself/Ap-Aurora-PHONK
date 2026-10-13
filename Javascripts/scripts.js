@@ -285,17 +285,29 @@
     Tone.Transport.start('+0.05');
   }
 
+  // one of three states: stopped (both up), playing (play down), paused (pause down)
+  function setTransportUi(mode) {
+    $('#playBtn').setAttribute('aria-pressed', String(mode === 'playing'));
+    $('#pauseBtn').setAttribute('aria-pressed', String(mode === 'paused'));
+  }
+  function pauseLoop() {
+    Tone.Transport.pause();
+    Tone.context.lookAhead = 0.01;
+    setTransportUi('paused');
+  }
+
   $('#playBtn').addEventListener('click', async () => {
     await initAudio();
     $('#start').hidden = true;
+    if (Tone.Transport.state === 'started') { pauseLoop(); return; }
     startLoop();
-    $('#playBtn').setAttribute('aria-pressed', 'true');
+    setTransportUi('playing');
   });
   $('#pauseBtn').addEventListener('click', () => {
     if (!A) return;
-    Tone.Transport.pause();
-    Tone.context.lookAhead = 0.01;
-    $('#playBtn').setAttribute('aria-pressed', 'false');
+    const s = Tone.Transport.state;
+    if (s === 'started') pauseLoop();
+    else if (s === 'paused') { startLoop(); setTransportUi('playing'); }
   });
 
   $('#startBtn').addEventListener('click', async () => { await initAudio(); $('#start').hidden = true; });

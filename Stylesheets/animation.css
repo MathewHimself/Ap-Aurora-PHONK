@@ -1,11 +1,11 @@
 /* Переходы и анимации */
 
 .toggle { transition: background .15s; }
-.play-btn { transition: box-shadow .2s, transform .08s; }
-.play-btn:active { transform: scale(0.96); }
+.transport-btn { transition: background .15s, border-color .15s, color .15s, box-shadow .2s, transform .08s; }
+.transport-btn:active { transform: scale(0.94); }
 .pad { transition: background .08s, box-shadow .08s, transform .08s; }
 .visual svg.aurora { transition: filter .12s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pad, .play-btn, .visual svg.aurora { transition: none; }
+  .pad, .transport-btn, .visual svg.aurora { transition: none; }
 }
