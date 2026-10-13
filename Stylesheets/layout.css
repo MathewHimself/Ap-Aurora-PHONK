@@ -44,9 +44,9 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; align-i
 .logo { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; background: linear-gradient(90deg, var(--cow), var(--drums) 35%, var(--master) 65%, var(--b808)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .key { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 10px; }
 .transport { display: flex; align-items: center; gap: 8px; }
-/* play / pause: отжата — тёмная кнопка с белой иконкой, нажата — кремовая с тёмной иконкой */
-.transport-btn { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #262B33; border-radius: 999px; background: #16191E; color: var(--text); }
-.transport-btn:hover { background: #20242B; }
+/* play / pause: отжата — серая кнопка с белой иконкой, нажата — бежевая с тёмной иконкой */
+.transport-btn { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #3A404A; border-radius: 999px; background: #2A2F37; color: var(--text); }
+.transport-btn:hover { background: #343A44; }
 .transport-btn[aria-pressed="true"] { background: var(--cream); border-color: var(--cream); color: var(--ink); }
 .play-btn { width: 56px; height: 56px; }
 .play-btn[aria-pressed="true"] { box-shadow: 0 0 18px rgba(241, 230, 200, 0.35); }
