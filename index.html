@@ -25,6 +25,11 @@
   <div class="brand">
     <h1 class="logo">ап/синт</h1>
     <div class="key">
+      <div class="transport" role="group" aria-label="Воспроизведение">
+        <button class="play-btn" id="playBtn" aria-pressed="false" aria-label="Играть луп"><img src="images/icon-play.svg" alt="" width="22" height="22"></button>
+        <button class="step" id="pauseBtn" aria-label="Пауза"><img src="images/icon-pause.svg" alt="" width="18" height="18"></button>
+      </div>
+      <span class="divider" aria-hidden="true"></span>
       <button class="step" id="keyPrev" aria-label="Предыдущая тональность">‹</button>
       <span class="key-name" id="keyName" aria-live="polite">C# минор</span>
       <button class="step" id="keyNext" aria-label="Следующая тональность">›</button>
@@ -127,7 +132,7 @@
       <span class="bus-808"><i class="sw"></i>808</span>
       <span class="bus-master"><i class="sw"></i>Мастер</span>
     </div>
-    <p class="hint">Играй мышкой или с клавиатуры: буквы в углу пэдов.</p>
+    <p class="hint">Жми ▶, чтобы запустить луп, и играй поверх мышкой или с клавиатуры: буквы в углу пэдов.</p>
   </div>
 
   <div class="side">

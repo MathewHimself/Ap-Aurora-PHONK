@@ -86,6 +86,7 @@
     const impNoise = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.005, decay: 1.6, sustain: 0 }, volume: -8 }).connect(impRev);
     const impBoom = new Tone.MembraneSynth({ pitchDecay: 0.2, octaves: 4, envelope: { attack: 0.001, decay: 1.5, sustain: 0 }, volume: -2 }).connect(impRev);
 
+    Tone.Transport.bpm.value = state.bpm;
     A = { master, meter, limiter, comp, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
     applyAll();
     return A;
@@ -107,8 +108,12 @@
 
   async function play(id) {
     await initAudio();
-    const t = Tone.now() + 0.005;
     flash(id);
+    trigger(id, Tone.now() + 0.005);
+  }
+
+  function trigger(id, t) {
+    t = Math.max(t, Tone.context.currentTime + 0.002); // a late event must not land in the past
     if (id.startsWith('cow')) {
       const i = Number(id.slice(3));
       cowbell(midiToHz(72 + state.key + COW_DEG[i]), t);
@@ -216,6 +221,7 @@
   function setBpm(v) {
     state.bpm = Math.max(80, Math.min(180, v));
     $('#bpm').value = state.bpm; $('#bpmLabel').textContent = state.bpm; $('#bpmBig').textContent = state.bpm;
+    if (A) Tone.Transport.bpm.value = state.bpm;
   }
   function setVol(v) {
     state.vol = Math.max(0, Math.min(100, v));
@@ -248,6 +254,48 @@
     const id = keyMap[e.key.toLowerCase()];
     if (id) { e.preventDefault(); play(id); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.pad')) { e.preventDefault(); play(e.target.closest('.pad').dataset.id); }
+  });
+
+  /* ---------- loop: 2 bars of 16ths, drift phonk ---------- */
+  // each step lists pad ids; cowN is the N-th cowbell pad, so the riff follows the key
+  const LOOP = [
+    ['kick', 'cow5', 'b_root', 'hat'], [], ['hat'], ['cow3'],
+    ['hat'], [], ['cow4', 'hat'], [],
+    ['clap', 'cow3', 'hat'], [], ['kick', 'cow2', 'b_root', 'hat'], [],
+    ['cow1', 'hat'], [], ['cow2', 'ohat'], [],
+    ['kick', 'cow5', 'b_root', 'hat'], [], ['hat'], ['cow3'],
+    ['hat'], [], ['kick', 'cow4', 'b_fifth', 'hat'], [],
+    ['clap', 'cow5', 'hat'], [], ['kick', 'cow3', 'b_glide', 'hat'], [],
+    ['cow2', 'roll'], ['cow1'], ['cow0'], [],
+  ];
+  let loopId = null, loopStep = 0;
+  function startLoop() {
+    if (loopId === null) {
+      loopStep = 0;
+      loopId = Tone.Transport.scheduleRepeat((time) => {
+        LOOP[loopStep].forEach((id) => {
+          trigger(id, time);
+          Tone.Draw.schedule(() => flash(id), time);
+        });
+        loopStep = (loopStep + 1) % LOOP.length;
+      }, '16n');
+    }
+    // pads want the shortest latency, the loop needs headroom to stay in time
+    Tone.context.lookAhead = 0.06;
+    Tone.Transport.start('+0.05');
+  }
+
+  $('#playBtn').addEventListener('click', async () => {
+    await initAudio();
+    $('#start').hidden = true;
+    startLoop();
+    $('#playBtn').setAttribute('aria-pressed', 'true');
+  });
+  $('#pauseBtn').addEventListener('click', () => {
+    if (!A) return;
+    Tone.Transport.pause();
+    Tone.context.lookAhead = 0.01;
+    $('#playBtn').setAttribute('aria-pressed', 'false');
   });
 
   $('#startBtn').addEventListener('click', async () => { await initAudio(); $('#start').hidden = true; });

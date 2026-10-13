@@ -38,11 +38,15 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; align-i
 .corner-title { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; }
 .corner-row { display: flex; align-items: center; gap: 10px; width: 100%; }
 .corner-row label { flex: 1; min-width: 0; }
-.step { width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px; border: 1px solid #262B33; background: #16191E; color: var(--text); font-size: 18px; line-height: 1; }
+.step { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px; border: 1px solid #262B33; background: #16191E; color: var(--text); font-size: 18px; line-height: 1; }
 .step:hover { background: #20242B; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .logo { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; background: linear-gradient(90deg, var(--cow), var(--drums) 35%, var(--master) 65%, var(--b808)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.key { display: flex; align-items: center; gap: 10px; }
+.key { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.transport { display: flex; align-items: center; gap: 8px; }
+.play-btn { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; flex-shrink: 0; border: 0; border-radius: 999px; background: var(--cream); box-shadow: 0 0 18px rgba(241, 230, 200, 0.35); }
+.play-btn[aria-pressed="true"] { box-shadow: 0 0 28px rgba(241, 230, 200, 0.7); }
+.divider { width: 1px; height: 28px; background: #262B33; }
 .key-name { min-width: 96px; text-align: center; font-size: 14px; font-weight: 600; }
 
 /* layout */
@@ -106,7 +110,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 
 .pad kbd { position: absolute; right: 6px; bottom: 4px; font: 600 10px 'Onest', sans-serif; color: var(--text-3); }
 .glass .pad { max-width: 72px; border-radius: 18px; border: 1.5px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.12); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .glass .pad kbd { color: rgba(255,255,255,0.8); }
-.pad.hit { background: var(--c); border-color: var(--c); box-shadow: 0 0 24px var(--c); transform: scale(0.96); }
+.pad.hit { background: var(--c); border-color: var(--c); box-shadow: 0 0 12px var(--c); transform: scale(0.96); }
 .pad.hit kbd { color: var(--ink); }
 .pads-row { display: flex; flex-wrap: wrap; gap: 20px; }
 .pads-row .card { padding: 18px; }
