@@ -56,7 +56,10 @@
     const master = new Tone.Volume(Tone.gainToDb(state.vol / 100)).toDestination();
     const meter = new Tone.Meter({ normalRange: true, smoothing: 0.8 });
     master.connect(meter);
-    const limiter = new Tone.Limiter(-0.3).connect(master);
+    // WebAudio's compressor adds its own makeup gain, so lowering a limiter threshold
+    // barely lowers the peaks; the limiter catches overs and a gain after it sets the ceiling
+    const ceiling = new Tone.Gain(1).connect(master);
+    const limiter = new Tone.Limiter(-1).connect(ceiling);
     const comp = new Tone.Compressor({ threshold: -18, ratio: 4, attack: 0.005, release: 0.15 }).connect(limiter);
 
     // cowbell bus
@@ -87,7 +90,7 @@
     const impBoom = new Tone.MembraneSynth({ pitchDecay: 0.2, octaves: 4, envelope: { attack: 0.001, decay: 1.5, sustain: 0 }, volume: -2 }).connect(impRev);
 
     Tone.Transport.bpm.value = state.bpm;
-    A = { master, meter, limiter, comp, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
+    A = { master, meter, limiter, ceiling, comp, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
     applyAll();
     return A;
   }
@@ -190,7 +193,8 @@
     A.bassFilter.frequency.rampTo(fxOn.bassFilter ? 80 * Math.pow(100, val('bassFilter.cutoff')) : 20000, 0.05);
     A.comp.threshold.value = fxOn.comp ? -40 + val('comp.threshold') * 40 : 0;
     A.comp.ratio.value = fxOn.comp ? 1 + val('comp.ratio') * 19 : 1;
-    A.limiter.threshold.value = fxOn.limiter ? -12 + val('limiter.ceiling') * 12 : 0;
+    A.limiter.threshold.value = fxOn.limiter ? -1 : 0;
+    A.ceiling.gain.rampTo(fxOn.limiter ? Tone.dbToGain(-12 + val('limiter.ceiling') * 12) : 1, 0.05);
     A.master.volume.rampTo(state.vol === 0 ? -Infinity : Tone.gainToDb(state.vol / 100), 0.05);
     // regenerating reverbs is costly, so debounce it
     clearTimeout(revTimer);
@@ -250,7 +254,7 @@
   });
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.target.matches('input')) return;
+    if (e.target.matches('input:not([type=range])')) return; // sliders keep focus after a drag, letters must still play
     const id = keyMap[e.key.toLowerCase()];
     if (id) { e.preventDefault(); play(id); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.pad')) { e.preventDefault(); play(e.target.closest('.pad').dataset.id); }
