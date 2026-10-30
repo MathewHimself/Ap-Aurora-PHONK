@@ -127,13 +127,56 @@
         <div class="grid grid-4" id="bassPads"></div>
       </section>
     </div>
-    <div class="legend">
-      <span class="bus-cow"><i class="sw"></i>Ковбелл</span>
-      <span class="bus-drums"><i class="sw"></i>Ударные</span>
-      <span class="bus-808"><i class="sw"></i>808</span>
-      <span class="bus-master"><i class="sw"></i>Мастер</span>
+    <div class="mixer" role="group" aria-label="Микшер">
+      <section class="card strip bus-cow" data-ch="cow" aria-label="Канал ковбелла">
+        <div class="card-head"><span class="sw"></span><span class="card-title">КОВБЕЛЛ</span></div>
+        <div class="strip-body">
+          <div class="strip-meter" aria-hidden="true"><span></span></div>
+          <input class="strip-fader" type="range" min="-60" max="6" step="0.5" value="0" aria-label="Громкость ковбелла">
+        </div>
+        <output class="strip-value">0.0 дБ</output>
+        <label class="ctrl"><span class="ctrl-row"><span>Панорама</span><output class="strip-pan-value">C</output></span><input class="strip-pan" type="range" min="-100" max="100" step="1" value="0" aria-label="Панорама ковбелла"></label>
+        <div class="strip-buttons">
+          <button class="strip-mute" aria-pressed="false" aria-keyshortcuts="1" aria-label="Заглушить ковбелла (клавиша 1)" title="Заглушить, клавиша 1">M</button>
+          <button class="strip-solo" aria-pressed="false" aria-label="Соло ковбелла" title="Соло">S</button>
+        </div>
+      </section>
+      <section class="card strip bus-drums" data-ch="drums" aria-label="Канал ударных">
+        <div class="card-head"><span class="sw"></span><span class="card-title">УДАРНЫЕ</span></div>
+        <div class="strip-body">
+          <div class="strip-meter" aria-hidden="true"><span></span></div>
+          <input class="strip-fader" type="range" min="-60" max="6" step="0.5" value="0" aria-label="Громкость ударных">
+        </div>
+        <output class="strip-value">0.0 дБ</output>
+        <label class="ctrl"><span class="ctrl-row"><span>Панорама</span><output class="strip-pan-value">C</output></span><input class="strip-pan" type="range" min="-100" max="100" step="1" value="0" aria-label="Панорама ударных"></label>
+        <div class="strip-buttons">
+          <button class="strip-mute" aria-pressed="false" aria-keyshortcuts="2" aria-label="Заглушить ударных (клавиша 2)" title="Заглушить, клавиша 2">M</button>
+          <button class="strip-solo" aria-pressed="false" aria-label="Соло ударных" title="Соло">S</button>
+        </div>
+      </section>
+      <section class="card strip bus-808" data-ch="808" aria-label="Канал 808">
+        <div class="card-head"><span class="sw"></span><span class="card-title">808</span></div>
+        <div class="strip-body">
+          <div class="strip-meter" aria-hidden="true"><span></span></div>
+          <input class="strip-fader" type="range" min="-60" max="6" step="0.5" value="0" aria-label="Громкость 808">
+        </div>
+        <output class="strip-value">0.0 дБ</output>
+        <label class="ctrl"><span class="ctrl-row"><span>Панорама</span><output class="strip-pan-value">C</output></span><input class="strip-pan" type="range" min="-100" max="100" step="1" value="0" aria-label="Панорама 808"></label>
+        <div class="strip-buttons">
+          <button class="strip-mute" aria-pressed="false" aria-keyshortcuts="3" aria-label="Заглушить 808 (клавиша 3)" title="Заглушить, клавиша 3">M</button>
+          <button class="strip-solo" aria-pressed="false" aria-label="Соло 808" title="Соло">S</button>
+        </div>
+      </section>
+      <section class="card strip bus-master" data-ch="master" aria-label="Канал мастера">
+        <div class="card-head"><span class="sw"></span><span class="card-title">МАСТЕР</span></div>
+        <div class="strip-body">
+          <div class="strip-meter" aria-hidden="true"><span></span></div>
+          <input class="strip-fader" type="range" min="0" max="100" step="1" value="80" aria-label="Громкость мастера">
+        </div>
+        <output class="strip-value">−1.9 дБ</output>
+      </section>
     </div>
-    <p class="hint">Жми ▶, чтобы запустить луп, и играй поверх мышкой или с клавиатуры: буквы в углу пэдов.</p>
+    <p class="hint">Жми ▶, чтобы запустить луп, и играй поверх мышкой или с клавиатуры: буквы в углу пэдов. Цифры 1–3 глушат каналы, двойной клик по фейдеру или панораме сбрасывает их.</p>
   </div>
 
   <div class="side">

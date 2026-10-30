@@ -21,7 +21,6 @@
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-}
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 *, *::before, *::after { box-sizing: inherit; }
 body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Onest', 'Helvetica Neue', Arial, sans-serif; line-height: 1.3; }
@@ -128,9 +127,25 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 
 .drums-card { flex: 1.5 1 380px; }
 .bass-card { flex: 1 1 280px; }
 .drums-card .pad, .bass-card .pad { max-width: 56px; }
-.legend { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; }
-.legend span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
-.legend .sw { width: 10px; height: 10px; }
+
+/* mixer: one strip per bus, colour from --c */
+.mixer { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.strip { padding: 14px; gap: 12px; }
+.strip-body { display: flex; justify-content: center; align-items: stretch; gap: 16px; height: 150px; }
+.strip-meter { position: relative; flex-shrink: 0; width: 8px; border-radius: 4px; background: var(--control); overflow: hidden; }
+.strip-meter span { position: absolute; inset: 0; background: var(--c); box-shadow: 0 0 10px var(--c); transform-origin: bottom; transform: scaleY(var(--level, 0)); }
+/* .strip prefix beats the generic input[type=range] rules */
+.strip .strip-fader { writing-mode: vertical-lr; direction: rtl; flex-shrink: 0; width: 20px; height: 100%; }
+.strip .strip-fader::-webkit-slider-runnable-track { width: 4px; height: 100%; }
+.strip .strip-fader::-webkit-slider-thumb { width: 18px; height: 12px; margin-top: 0; margin-left: -7px; }
+.strip .strip-fader::-moz-range-track { width: 4px; height: 100%; }
+.strip .strip-fader::-moz-range-thumb { width: 18px; height: 12px; }
+.strip-value { font-size: 13px; font-weight: 600; text-align: center; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.strip-buttons { display: flex; gap: 6px; }
+.strip-mute, .strip-solo { flex: 1; min-height: 36px; border: 0; border-radius: 10px; background: var(--control); color: var(--text-2); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+.strip-mute[aria-pressed="true"] { background: var(--cream); color: var(--ink); }
+.strip-solo[aria-pressed="true"] { background: var(--c); color: var(--ink); }
+.strip.is-silent .strip-body, .strip.is-silent .strip-value { opacity: 0.4; }
 .hint { font-size: 12px; color: var(--text-3); text-align: center; margin: 0; }
 
 .start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 10; padding: 24px; }

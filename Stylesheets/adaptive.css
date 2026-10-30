@@ -5,4 +5,5 @@
   .visual { height: 520px; }
   .tempo b { font-size: 64px; }
   .glass-grid { gap: 8px; }
+  .mixer { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

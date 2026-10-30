@@ -106,6 +106,7 @@
     Tone.Transport.bpm.value = state.bpm;
     A = { master, meter, limiter, ceiling, comp, chCow, ch808, chDrums, meterCow, meter808, meterDrums, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
     applyAll();
+    applyMixer();
     return A;
   }
 
@@ -244,6 +245,11 @@
   function setVol(v) {
     state.vol = Math.max(0, Math.min(100, v));
     $('#vol').value = state.vol; $('#volLabel').textContent = state.vol;
+    // the master strip drives the same state.vol as the corner control
+    const s = strip('master'), fader = $('.strip-fader', s);
+    fader.value = state.vol;
+    const txt = fmtDb(state.vol === 0 ? -Infinity : 20 * Math.log10(state.vol / 100));
+    $('.strip-value', s).textContent = txt; fader.setAttribute('aria-valuetext', txt);
     applyAll();
   }
   $('#bpm').addEventListener('input', (e) => setBpm(Number(e.target.value)));
@@ -252,6 +258,56 @@
     const d = Number(b.dataset.dir);
     if (b.dataset.step === 'bpm') setBpm(state.bpm + d); else setVol(state.vol + d * 5);
   }));
+  /* ---------- mixer ---------- */
+  const STRIPS = { cow: 'chCow', drums: 'chDrums', '808': 'ch808' };
+  const MUTE_KEYS = { 1: 'cow', 2: 'drums', 3: '808' };
+  const FADER_FLOOR = -60; // the bottom of the fader means −∞
+  const strip = (ch) => $(`.strip[data-ch="${ch}"]`);
+  const pressed = (b) => b.getAttribute('aria-pressed') === 'true';
+  const fmtDb = (db) => db <= FADER_FLOOR ? '−∞ дБ' : `${db > 0.04 ? '+' : db < -0.04 ? '−' : ''}${Math.abs(db).toFixed(1)} дБ`;
+  const fmtPan = (p) => p === 0 ? 'C' : `${p < 0 ? 'L' : 'R'} ${Math.abs(p)}`;
+
+  function applyStrip(ch) {
+    const s = strip(ch), fader = $('.strip-fader', s), pan = $('.strip-pan', s);
+    const db = Number(fader.value), p = Number(pan.value);
+    const dbTxt = fmtDb(db), panTxt = fmtPan(p);
+    $('.strip-value', s).textContent = dbTxt; fader.setAttribute('aria-valuetext', dbTxt);
+    $('.strip-pan-value', s).textContent = panTxt; pan.setAttribute('aria-valuetext', panTxt === 'C' ? 'центр' : panTxt);
+    if (!A) return;
+    const c = A[STRIPS[ch]];
+    c.volume.rampTo(db <= FADER_FLOOR ? -Infinity : db, 0.05);
+    c.pan.rampTo(p / 100, 0.05);
+    c.mute = pressed($('.strip-mute', s));
+    c.solo = pressed($('.strip-solo', s));
+  }
+  function applyMixer() {
+    const chs = Object.keys(STRIPS);
+    chs.forEach(applyStrip);
+    // dim strips that are silent: muted, or left out while another strip is soloed
+    const anySolo = chs.some((ch) => pressed($('.strip-solo', strip(ch))));
+    chs.forEach((ch) => {
+      const s = strip(ch);
+      s.classList.toggle('is-silent', pressed($('.strip-mute', s)) || (anySolo && !pressed($('.strip-solo', s))));
+    });
+  }
+  function toggleButton(b) {
+    b.setAttribute('aria-pressed', String(!pressed(b)));
+    applyMixer();
+  }
+
+  Object.keys(STRIPS).forEach((ch) => {
+    const s = strip(ch);
+    [['.strip-fader', 0], ['.strip-pan', 0]].forEach(([sel, home]) => {
+      const inp = $(sel, s);
+      inp.addEventListener('input', () => applyStrip(ch));
+      inp.addEventListener('dblclick', () => { inp.value = home; applyStrip(ch); });
+    });
+    $$('.strip-mute, .strip-solo', s).forEach((b) => b.addEventListener('click', () => toggleButton(b)));
+  });
+  const masterFader = $('.strip-fader', strip('master'));
+  masterFader.addEventListener('input', () => setVol(Number(masterFader.value)));
+  masterFader.addEventListener('dblclick', () => setVol(100));
+
   function setKey(k) { state.key = (k + 12) % 12; $('#keyName').textContent = `${NOTES[state.key]} минор`; renderCowPads(); }
   $('#keyPrev').addEventListener('click', () => setKey(state.key - 1));
   $('#keyNext').addEventListener('click', () => setKey(state.key + 1));
@@ -269,6 +325,7 @@
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.target.matches('input:not([type=range])')) return; // sliders keep focus after a drag, letters must still play
+    if (MUTE_KEYS[e.key]) { e.preventDefault(); toggleButton($('.strip-mute', strip(MUTE_KEYS[e.key]))); return; }
     const id = keyMap[e.key.toLowerCase()];
     if (id) { e.preventDefault(); play(id); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.pad')) { e.preventDefault(); play(e.target.closest('.pad').dataset.id); }
@@ -330,16 +387,25 @@
 
   $('#startBtn').addEventListener('click', async () => { await initAudio(); $('#start').hidden = true; });
 
-  /* ---------- aurora reacts to level ---------- */
+  /* ---------- aurora and strip meters react to level ---------- */
   const disp = $('#disp'), turb = $('#turb'), svg = $('#aurora');
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const meterBars = ['cow', 'drums', '808', 'master'].map((ch) => [ch, $('.strip-meter span', strip(ch))]);
+  const METERS = { cow: 'meterCow', drums: 'meterDrums', '808': 'meter808', master: 'meter' };
+  const peak = (meter) => { const m = meter.getValue(); return Array.isArray(m) ? Math.max(...m) : m; };
   let lvl = 0, frame = 0;
   function tick(ts) {
     requestAnimationFrame(tick);
-    if (!A || still) return;
+    if (!A) return;
     if (++frame % 2) return;
-    const m = A.meter.getValue();
-    const raw = Array.isArray(m) ? Math.max(...m) : m;
+    // meters show −60…+6 dB, the same span as the faders
+    meterBars.forEach(([ch, bar]) => {
+      const v = peak(A[METERS[ch]]);
+      const pos = v > 0 ? Math.min(1, Math.max(0, (20 * Math.log10(v) - FADER_FLOOR) / (6 - FADER_FLOOR))) : 0;
+      bar.style.setProperty('--level', pos.toFixed(3));
+    });
+    if (still) return;
+    const raw = peak(A.meter);
     lvl += (Math.min(1, raw * 2.2) - lvl) * 0.35;
     disp.setAttribute('scale', (380 + lvl * 360).toFixed(0));
     const fx = 0.0035 + Math.sin(ts / 4000) * 0.0005;
@@ -348,5 +414,5 @@
   }
   requestAnimationFrame(tick);
 
-  setBpm(130); updateOutputs();
+  setBpm(130); setVol(state.vol); applyMixer();
 })();
