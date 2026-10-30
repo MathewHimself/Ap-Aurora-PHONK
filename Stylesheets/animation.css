@@ -3,9 +3,11 @@
 .toggle { transition: background .15s; }
 .transport-btn { transition: background .15s, border-color .15s, color .15s, box-shadow .2s, transform .08s; }
 .transport-btn:active { transform: scale(0.94); }
+.tab { transition: background .15s, color .15s; }
+.seq-step { transition: background .08s, border-color .08s, box-shadow .08s; }
 .pad { transition: background .08s, box-shadow .08s, transform .08s; }
 .visual svg.aurora { transition: filter .12s; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pad, .transport-btn, .visual svg.aurora { transition: none; }
+  .pad, .transport-btn, .tab, .seq-step, .visual svg.aurora { transition: none; }
 }

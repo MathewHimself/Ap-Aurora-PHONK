@@ -121,8 +121,9 @@
     setTimeout(() => [o1, o2, bp, env].forEach((n) => n.dispose()), 1500);
   }
 
-  let lastNoise = 0;
-  const after = (t) => { const s = Math.max(t, lastNoise + 0.005); lastNoise = s; return s; };
+  // a monophonic noise synth needs strictly increasing start times, so keep them apart per synth
+  const lastStart = new Map();
+  const after = (synth, t) => { const s = Math.max(t, (lastStart.get(synth) || 0) + 0.005); lastStart.set(synth, s); return s; };
 
   async function play(id) {
     await initAudio();
@@ -130,7 +131,8 @@
     trigger(id, Tone.now() + 0.005);
   }
 
-  function trigger(id, t) {
+  // until: the roll stops there, so the next written hat is not pushed back by it
+  function trigger(id, t, until) {
     t = Math.max(t, Tone.context.currentTime + 0.002); // a late event must not land in the past
     if (id.startsWith('cow')) {
       const i = Number(id.slice(3));
@@ -150,15 +152,15 @@
         break;
       }
       case 'kick': A.kick.triggerAttackRelease('C1', 0.4, t); break;
-      case 'clap': for (let k = 0; k < 3; k++) A.clap.triggerAttackRelease(0.14, after(t + k * 0.011)); break;
-      case 'hat': A.ohat.triggerRelease(t); A.hat.triggerAttackRelease(0.05, after(t)); break;
-      case 'ohat': A.ohat.triggerAttackRelease(0.45, after(t)); break;
+      case 'clap': for (let k = 0; k < 3; k++) A.clap.triggerAttackRelease(0.14, after(A.clap, t + k * 0.011)); break;
+      case 'hat': A.ohat.triggerRelease(t); A.hat.triggerAttackRelease(0.05, after(A.hat, t)); break;
+      case 'ohat': A.ohat.triggerAttackRelease(0.45, after(A.ohat, t)); break;
       case 'roll': {
         const step = 60 / state.bpm / 6;
-        for (let k = 0; k < 6; k++) A.hat.triggerAttackRelease(0.04, after(t + k * step));
+        for (let k = 0; k < 6 && !(until && t + k * step > until - 0.01); k++) A.hat.triggerAttackRelease(0.04, after(A.hat, t + k * step));
         break;
       }
-      case 'impact': A.impBoom.triggerAttackRelease('C1', 1.2, t); A.impNoise.triggerAttackRelease(1.6, after(t)); break;
+      case 'impact': A.impBoom.triggerAttackRelease('C1', 1.2, t); A.impNoise.triggerAttackRelease(1.6, after(A.impNoise, t)); break;
     }
   }
 
@@ -283,11 +285,16 @@
   function applyMixer() {
     const chs = Object.keys(STRIPS);
     chs.forEach(applyStrip);
+    // the sequencer's M and S are the same switches as the mixer's
+    $$('.seq-mute, .seq-solo').forEach((b) => b.setAttribute('aria-pressed', String(pressed($(b.classList.contains('seq-mute') ? '.strip-mute' : '.strip-solo', strip(b.dataset.ch))))));
     // dim strips that are silent: muted, or left out while another strip is soloed
     const anySolo = chs.some((ch) => pressed($('.strip-solo', strip(ch))));
     chs.forEach((ch) => {
       const s = strip(ch);
-      s.classList.toggle('is-silent', pressed($('.strip-mute', s)) || (anySolo && !pressed($('.strip-solo', s))));
+      const silent = pressed($('.strip-mute', s)) || (anySolo && !pressed($('.strip-solo', s)));
+      s.classList.toggle('is-silent', silent);
+      const g = $(`.seq-group[data-ch="${ch}"]`);
+      if (g) g.classList.toggle('is-silent', silent);
     });
   }
   function toggleButton(b) {
@@ -308,7 +315,7 @@
   masterFader.addEventListener('input', () => setVol(Number(masterFader.value)));
   masterFader.addEventListener('dblclick', () => setVol(100));
 
-  function setKey(k) { state.key = (k + 12) % 12; $('#keyName').textContent = `${NOTES[state.key]} минор`; renderCowPads(); }
+  function setKey(k) { state.key = (k + 12) % 12; $('#keyName').textContent = `${NOTES[state.key]} минор`; renderCowPads(); renderSeqNotes(); }
   $('#keyPrev').addEventListener('click', () => setKey(state.key - 1));
   $('#keyNext').addEventListener('click', () => setKey(state.key + 1));
 
@@ -331,34 +338,141 @@
     if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.pad')) { e.preventDefault(); play(e.target.closest('.pad').dataset.id); }
   });
 
-  /* ---------- loop: 2 bars of 16ths, drift phonk ---------- */
-  // each step lists pad ids; cowN is the N-th cowbell pad, so the riff follows the key
-  const LOOP = [
-    ['kick', 'cow5', 'b_root', 'hat'], [], ['hat'], ['cow3'],
-    ['hat'], [], ['cow4', 'hat'], [],
-    ['clap', 'cow3', 'hat'], [], ['kick', 'cow2', 'b_root', 'hat'], [],
-    ['cow1', 'hat'], [], ['cow2', 'ohat'], [],
-    ['kick', 'cow5', 'b_root', 'hat'], [], ['hat'], ['cow3'],
-    ['hat'], [], ['kick', 'cow4', 'b_fifth', 'hat'], [],
-    ['clap', 'cow5', 'hat'], [], ['kick', 'cow3', 'b_glide', 'hat'], [],
-    ['cow2', 'roll'], ['cow1'], ['cow0'], [],
+  /* ---------- sequencer: 16 steps of 1/16, the loop that ▶ plays ---------- */
+  const STEPS = 16;
+  const SEQ_GROUPS = [
+    { ch: 'cow', bus: 'bus-cow', title: 'КОВБЕЛЛ', rows: COW_DEG.map((d, i) => ({ id: 'cow' + i, sub: COW_LBL[i], key: COW_KEYS[i] })) },
+    { ch: 'drums', bus: 'bus-drums', title: 'УДАРНЫЕ', rows: DRUMS.map(([id, n, k]) => ({ id, name: id === 'ohat' ? 'Откр. хэт' : n, key: k })) },
+    { ch: '808', bus: 'bus-808', title: '808', rows: BASS.map(([id, n, k]) => ({ id: 'b_' + id, name: n, key: k })) },
   ];
+  // default pattern A from the design, step numbers count from 1
+  const PATTERN_A = {
+    cow1: [12], cow2: [11, 13], cow3: [4, 9, 15], cow4: [3, 7], cow5: [1, 5],
+    kick: [1, 7, 11], clap: [5, 13], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15], roll: [16], impact: [1],
+    b_root: [1], b_fifth: [11], b_oct: [15], b_glide: [7],
+  };
+  const pattern = {};
+  SEQ_GROUPS.forEach((g) => g.rows.forEach((r) => { pattern[r.id] = Array.from({ length: STEPS }, (_, s) => (PATTERN_A[r.id] || []).includes(s + 1)); }));
+
+  const seqCols = Array.from({ length: STEPS }, () => []); // every element of a step column, for the playhead
+  const isBeat = (s) => s % 4 === 0;
+  function addSteps(parent, make) {
+    for (let s = 0; s < STEPS; s++) {
+      if (s && isBeat(s)) parent.appendChild(Object.assign(document.createElement('span'), { className: 'seq-gap' }));
+      const el = make(s);
+      el.classList.toggle('is-beat', isBeat(s));
+      parent.appendChild(el);
+      seqCols[s].push(el);
+    }
+  }
+  addSteps($('#seqTimeline'), () => Object.assign(document.createElement('div'), { className: 'seq-col' }));
+  addSteps($('#seqNums'), (s) => Object.assign(document.createElement('span'), { textContent: s + 1 }));
+
+  SEQ_GROUPS.forEach((g) => {
+    const group = document.createElement('div');
+    group.className = `seq-group ${g.bus}`;
+    group.dataset.ch = g.ch;
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', g.title);
+    const gen = { cow: 'ковбелл', drums: 'ударные', '808': '808' }[g.ch];
+    group.innerHTML = `<div class="seq-group-head"><span class="sw"></span><span class="card-title">${g.title}</span>`
+      + `<button class="seq-mute" data-ch="${g.ch}" aria-pressed="false" aria-label="Заглушить ${gen}">M</button>`
+      + `<button class="seq-solo" data-ch="${g.ch}" aria-pressed="false" aria-label="Соло: ${gen}">S</button></div>`;
+    g.rows.forEach((r) => {
+      const row = document.createElement('div');
+      row.className = 'seq-cols seq-row';
+      row.innerHTML = `<div class="seq-label"><span><span class="seq-name" data-row="${r.id}">${r.name || ''}</span>${r.sub ? `<span class="seq-sub">${r.sub}</span>` : ''}</span><kbd class="seq-key">${r.key.toUpperCase()}</kbd></div>`;
+      addSteps(row, (s) => {
+        const b = document.createElement('button');
+        b.className = 'seq-step';
+        b.dataset.row = r.id;
+        b.dataset.step = s;
+        b.setAttribute('aria-pressed', String(pattern[r.id][s]));
+        return b;
+      });
+      group.appendChild(row);
+    });
+    $('#seqGrid').appendChild(group);
+  });
+  function renderSeqNotes() {
+    COW_DEG.forEach((d, i) => { $(`.seq-name[data-row="cow${i}"]`).textContent = NOTES[(state.key + d) % 12]; });
+    $$('.seq-step').forEach((b) => {
+      const name = $(`.seq-name[data-row="${b.dataset.row}"]`).textContent;
+      const sub = b.dataset.row.startsWith('cow') ? ' ' + COW_LBL[Number(b.dataset.row.slice(3))] : '';
+      b.setAttribute('aria-label', `${name}${sub}, шаг ${Number(b.dataset.step) + 1}`);
+    });
+  }
+  renderSeqNotes();
+
+  $('#seqGrid').addEventListener('click', (e) => {
+    const b = e.target.closest('.seq-step');
+    if (b) {
+      const on = !pattern[b.dataset.row][b.dataset.step];
+      pattern[b.dataset.row][b.dataset.step] = on;
+      b.setAttribute('aria-pressed', String(on));
+      return;
+    }
+    const ms = e.target.closest('.seq-mute, .seq-solo');
+    if (ms) toggleButton($(ms.classList.contains('seq-mute') ? '.strip-mute' : '.strip-solo', strip(ms.dataset.ch)));
+  });
+
+  let playhead = 0;
+  function setPlayhead(s) {
+    seqCols[playhead].forEach((el) => el.classList.remove('is-playhead'));
+    seqCols[s].forEach((el) => el.classList.add('is-playhead'));
+    playhead = s;
+    $('#seqStepNum').textContent = String(s + 1).padStart(2, '0');
+  }
+  setPlayhead(0);
+
+  // the roll runs until the next written hat or roll, at most one beat
+  function rollUntil(s, time) {
+    const sixteenth = Tone.Time('16n').toSeconds();
+    for (let k = 1; k < 4; k++) {
+      const n = (s + k) % STEPS;
+      if (pattern.hat[n] || pattern.roll[n]) return time + k * sixteenth;
+    }
+    return undefined;
+  }
+
   let loopId = null, loopStep = 0;
   function startLoop() {
     if (loopId === null) {
       loopStep = 0;
       loopId = Tone.Transport.scheduleRepeat((time) => {
-        LOOP[loopStep].forEach((id) => {
-          trigger(id, time);
-          Tone.Draw.schedule(() => flash(id), time);
-        });
-        loopStep = (loopStep + 1) % LOOP.length;
+        const s = loopStep;
+        SEQ_GROUPS.forEach((g) => g.rows.forEach((r) => {
+          if (!pattern[r.id][s]) return;
+          trigger(r.id, time, r.id === 'roll' ? rollUntil(s, time) : undefined);
+          Tone.Draw.schedule(() => flash(r.id), time);
+        }));
+        Tone.Draw.schedule(() => setPlayhead(s), time);
+        loopStep = (s + 1) % STEPS;
       }, '16n');
     }
     // pads want the shortest latency, the loop needs headroom to stay in time
     Tone.context.lookAhead = 0.06;
     Tone.Transport.start('+0.05');
   }
+
+  /* ---------- screen tabs ---------- */
+  const tabs = $$('.tab');
+  function selectTab(tab, focus) {
+    tabs.forEach((t) => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      $('#' + t.getAttribute('aria-controls')).hidden = !on;
+    });
+    if (focus) tab.focus();
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => selectTab(t)));
+  $('.tabs').addEventListener('keydown', (e) => {
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const next = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (next) { e.preventDefault(); selectTab(tabs[(i + next + tabs.length) % tabs.length], true); }
+  });
 
   // one of three states: stopped (both up), playing (play down), paused (pause down)
   function setTransportUi(mode) {
@@ -389,6 +503,7 @@
 
   /* ---------- aurora and strip meters react to level ---------- */
   const disp = $('#disp'), turb = $('#turb'), svg = $('#aurora');
+  const seqDisp = $('#seqDisp'), seqSvg = $('#seqAurora');
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const meterBars = ['cow', 'drums', '808', 'master'].map((ch) => [ch, $('.strip-meter span', strip(ch))]);
   const METERS = { cow: 'meterCow', drums: 'meterDrums', '808': 'meter808', master: 'meter' };
@@ -410,7 +525,10 @@
     disp.setAttribute('scale', (380 + lvl * 360).toFixed(0));
     const fx = 0.0035 + Math.sin(ts / 4000) * 0.0005;
     turb.setAttribute('baseFrequency', `${fx.toFixed(5)} 0.011`);
-    svg.style.filter = `brightness(${(1 + lvl * 0.6).toFixed(2)}) saturate(${(1 + lvl * 0.5).toFixed(2)})`;
+    const glow = `brightness(${(1 + lvl * 0.6).toFixed(2)}) saturate(${(1 + lvl * 0.5).toFixed(2)})`;
+    svg.style.filter = glow;
+    seqSvg.style.filter = glow;
+    seqDisp.setAttribute('scale', (240 + lvl * 220).toFixed(0));
   }
   requestAnimationFrame(tick);
 
