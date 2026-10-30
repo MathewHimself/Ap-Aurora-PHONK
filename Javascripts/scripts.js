@@ -1,12 +1,13 @@
 (() => {
-  const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  // note names are Russian too, short with ♯ so they fit on the pads
+  const NOTES = ['до', 'до♯', 'ре', 'ре♯', 'ми', 'фа', 'фа♯', 'соль', 'соль♯', 'ля', 'ля♯', 'си'];
   const COW_DEG = [0, 3, 5, 7, 10, 12];
   const COW_LBL = ['1', 'b3', '4', '5', 'b7', '8'];
   const COW_KEYS = ['a','s','d','f','g','h'];
   const DRUMS = [['kick','Kick','q'],['clap','Clap','w'],['hat','Хэт','e'],['ohat','Откр.','r'],['roll','Ролл','t'],['impact','Impact','y']];
   const BASS = [['root','Тоника','z',0],['fifth','Квинта','x',7],['oct','Октава','c',12],['glide','Глайд','v',0]];
 
-  // tonality names are Russian; pads and sequencer rows keep the short letters
+  // tonality names in the header spell the sharp out
   const KEY_NAMES = ['до', 'до-диез', 'ре', 'ре-диез', 'ми', 'фа', 'фа-диез', 'соль', 'соль-диез', 'ля', 'ля-диез', 'си'];
   const state = { bpm: 130, vol: 80, key: 3, glide: 0.25 }; // D# minor
   const midiToHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
