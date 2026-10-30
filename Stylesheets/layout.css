@@ -65,7 +65,7 @@ header { display: flex; flex-wrap: wrap; justify-content: space-between; align-i
 .icon-tab-aurora { --icon: url("../images/icon-tab-aurora.svg"); width: 18px; height: 18px; }
 .icon-tab-seq { --icon: url("../images/icon-tab-seq.svg"); width: 18px; height: 18px; }
 .divider { width: 1px; height: 28px; background: #262B33; }
-.key-name { min-width: 96px; text-align: center; font-size: 14px; font-weight: 600; }
+.key-name { min-width: 136px; text-align: center; font-size: 14px; font-weight: 600; }
 
 /* screen tabs: 01 Аврора, 02 Секвенсор */
 .tabs { align-self: center; display: flex; gap: 6px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; }

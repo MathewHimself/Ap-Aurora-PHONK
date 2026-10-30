@@ -6,7 +6,9 @@
   const DRUMS = [['kick','Kick','q'],['clap','Clap','w'],['hat','Хэт','e'],['ohat','Откр.','r'],['roll','Ролл','t'],['impact','Impact','y']];
   const BASS = [['root','Тоника','z',0],['fifth','Квинта','x',7],['oct','Октава','c',12],['glide','Глайд','v',0]];
 
-  const state = { bpm: 130, vol: 80, key: 1, glide: 0.25 };
+  // tonality names are Russian; pads and sequencer rows keep the short letters
+  const KEY_NAMES = ['до', 'до-диез', 'ре', 'ре-диез', 'ми', 'фа', 'фа-диез', 'соль', 'соль-диез', 'ля', 'ля-диез', 'си'];
+  const state = { bpm: 130, vol: 80, key: 3, glide: 0.25 }; // D# minor
   const midiToHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   const pct = (el) => Number(el.value) / 100;
   const $ = (s, r = document) => r.querySelector(s);
@@ -320,7 +322,7 @@
   masterFader.addEventListener('input', () => setVol(Number(masterFader.value)));
   masterFader.addEventListener('dblclick', () => setVol(100));
 
-  function setKey(k) { state.key = (k + 12) % 12; $('#keyName').textContent = `${NOTES[state.key]} минор`; renderCowPads(); renderSeqNotes(); }
+  function setKey(k) { state.key = (k + 12) % 12; $('#keyName').textContent = `${KEY_NAMES[state.key]} минор`; renderCowPads(); renderSeqNotes(); }
   $('#keyPrev').addEventListener('click', () => setKey(state.key - 1));
   $('#keyNext').addEventListener('click', () => setKey(state.key + 1));
 
