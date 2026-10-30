@@ -353,28 +353,45 @@
     { ch: '808', bus: 'bus-808', title: '808', rows: BASS.map(([id, n, k]) => ({ id: 'b_' + id, name: n, key: k })) },
   ];
   // step numbers count from 1. A is the pattern from the design; B–D follow the mood of the
-  // sections of «shiratoki!» (130 BPM, E minor, Em → G → Cmaj7), played with our own sounds
+  // sections of «shiratoki!» (130 BPM, E minor, Em → G → Cmaj7), E–G the mood of «Montagem Solar
+  // Atmosfera» (142 BPM, A minor, F → C → Am → E), played with our own sounds.
+  // bpm and key (index in NOTES) are applied when the pattern is chosen, the mood depends on them
   const PATTERNS = {
-    A: { name: 'Базовый', notes: {
+    A: { name: 'Базовый', bpm: 130, key: 3, notes: {
       cow1: [12], cow2: [11, 13], cow3: [4, 9, 15], cow4: [3, 7], cow5: [1, 5],
       kick: [1, 7, 11], clap: [5, 13], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15], roll: [16], impact: [1],
       b_root: [1], b_fifth: [11], b_oct: [15], b_glide: [7],
     } },
     // intro: a lone 8th-note arpeggio, root–fifth–octave over the minor chord, then the relative major
-    B: { name: 'Интро', notes: {
+    B: { name: 'Интро', bpm: 130, key: 4, notes: {
       cow0: [1, 7], cow3: [3, 11], cow5: [5], cow1: [9, 15], cow4: [13],
     } },
     // 0:14: the same arpeggio over a pitch-dropping kick on every beat, doubled by the 808
-    C: { name: 'Бит', notes: {
+    C: { name: 'Бит', bpm: 130, key: 4, notes: {
       cow0: [1, 7], cow3: [3, 11], cow5: [5], cow1: [9, 15], cow4: [13],
       kick: [1, 5, 9, 13],
       b_root: [1, 5, 9], b_glide: [13],
     } },
     // drop: four on the floor, 8th hats, claps on 1, 9 and 11, 808 on every beat and a sparse lead
-    D: { name: 'Дроп', notes: {
+    D: { name: 'Дроп', bpm: 130, key: 4, notes: {
       cow5: [1], cow4: [7], cow3: [11], cow1: [14],
       kick: [1, 5, 9, 13], clap: [1, 9, 11], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15],
       b_root: [1, 5], b_fifth: [9], b_glide: [13],
+    } },
+    // montagem intro: a lone three-note motif on 1, 5 and 10, answered on 14
+    E: { name: 'Атмосфера', bpm: 142, key: 9, notes: {
+      cow0: [1], cow3: [5], cow4: [10], cow1: [14],
+    } },
+    // break: the motif over a syncopated kick without bass, a clap and a roll into the drop
+    F: { name: 'Брейк', bpm: 142, key: 9, notes: {
+      cow0: [1], cow3: [5], cow4: [10], cow1: [14],
+      kick: [1, 5, 9, 11, 13], clap: [12], roll: [16],
+    } },
+    // drop: punchy kick on every beat, the 808 pumps on 1, 4, 9, 13 (root, then fifth) under the motif
+    G: { name: 'Солар', bpm: 142, key: 9, notes: {
+      cow0: [1], cow3: [5], cow4: [10], cow1: [14],
+      kick: [1, 5, 9, 13],
+      b_root: [1, 4], b_fifth: [9, 13],
     } },
   };
   // every pattern keeps its own grid, so edits survive switching back and forth
@@ -455,6 +472,8 @@
     $$('[data-pattern]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pattern === k)));
     $('#seqPatternKey').textContent = k;
     $('#seqPatternName').textContent = PATTERNS[k].name;
+    setBpm(PATTERNS[k].bpm);
+    setKey(PATTERNS[k].key);
   }
   $$('[data-pattern]').forEach((b) => b.addEventListener('click', () => selectPattern(b.dataset.pattern)));
   selectPattern('A');
