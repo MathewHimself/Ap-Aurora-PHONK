@@ -62,19 +62,32 @@
     const limiter = new Tone.Limiter(-1).connect(ceiling);
     const comp = new Tone.Compressor({ threshold: -18, ratio: 4, attack: 0.005, release: 0.15 }).connect(limiter);
 
+    // mixer channels: every bus ends in its own strip (volume, pan, mute, solo) before the comp.
+    // Tone.Channel defaults to channelCount 1, which would fold the stereo reverbs to mono
+    // and drop the centre 3 dB; 2 keeps 0 dB on the fader sounding exactly like before
+    const channel = () => {
+      const ch = new Tone.Channel({ channelCount: 2 }).connect(comp);
+      const meter = new Tone.Meter({ normalRange: true, smoothing: 0.8 });
+      ch.connect(meter);
+      return [ch, meter];
+    };
+    const [chCow, meterCow] = channel();
+    const [ch808, meter808] = channel();
+    const [chDrums, meterDrums] = channel();
+
     // cowbell bus
-    const cowRev = new Tone.Reverb({ decay: 2.5, preDelay: 0.02, wet: 0.35 }).connect(comp);
+    const cowRev = new Tone.Reverb({ decay: 2.5, preDelay: 0.02, wet: 0.35 }).connect(chCow);
     const cowDist = new Tone.Distortion({ distortion: 0.4, wet: 0.6, oversample: '2x' }).connect(cowRev);
     const cowIn = new Tone.Gain(0.55).connect(cowDist);
 
     // 808 bus
-    const bassFilter = new Tone.Filter({ frequency: 1200, type: 'lowpass', rolloff: -24 }).connect(comp);
+    const bassFilter = new Tone.Filter({ frequency: 1200, type: 'lowpass', rolloff: -24 }).connect(ch808);
     const bassDist = new Tone.Distortion({ distortion: 0.55, wet: 0.7, oversample: '4x' }).connect(bassFilter);
     const bass = new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 1.5, oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.4, sustain: 0, release: 0.1 }, volume: -3 }).connect(bassDist);
     const glide = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.4, sustain: 0, release: 0.1 }, volume: -3 }).connect(bassDist);
 
     // drums bus
-    const drumRev = new Tone.Reverb({ decay: 1.2, wet: 0.15 }).connect(comp);
+    const drumRev = new Tone.Reverb({ decay: 1.2, wet: 0.15 }).connect(chDrums);
     const crushMix = new Tone.CrossFade(0).connect(drumRev);
     const crusher = new Tone.WaveShaper(crushCurve(6)).connect(crushMix.b);
     const drumIn = new Tone.Gain(1);
@@ -85,12 +98,13 @@
     const hatHp = new Tone.Filter({ frequency: 7000, type: 'highpass' }).connect(drumIn);
     const hat = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.05, sustain: 0 }, volume: -10 }).connect(hatHp);
     const ohat = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.45, sustain: 0, release: 0.03 }, volume: -12 }).connect(hatHp);
-    const impRev = new Tone.Reverb({ decay: 4, wet: 0.65 }).connect(comp);
+    // impact keeps its own long reverb but still belongs to the drums strip
+    const impRev = new Tone.Reverb({ decay: 4, wet: 0.65 }).connect(chDrums);
     const impNoise = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.005, decay: 1.6, sustain: 0 }, volume: -8 }).connect(impRev);
     const impBoom = new Tone.MembraneSynth({ pitchDecay: 0.2, octaves: 4, envelope: { attack: 0.001, decay: 1.5, sustain: 0 }, volume: -2 }).connect(impRev);
 
     Tone.Transport.bpm.value = state.bpm;
-    A = { master, meter, limiter, ceiling, comp, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
+    A = { master, meter, limiter, ceiling, comp, chCow, ch808, chDrums, meterCow, meter808, meterDrums, cowRev, cowDist, cowIn, bassFilter, bassDist, bass, glide, drumRev, crushMix, crusher, kick, clap, hat, ohat, impNoise, impBoom };
     applyAll();
     return A;
   }
