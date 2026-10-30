@@ -345,14 +345,39 @@
     { ch: 'drums', bus: 'bus-drums', title: 'УДАРНЫЕ', rows: DRUMS.map(([id, n, k]) => ({ id, name: id === 'ohat' ? 'Откр. хэт' : n, key: k })) },
     { ch: '808', bus: 'bus-808', title: '808', rows: BASS.map(([id, n, k]) => ({ id: 'b_' + id, name: n, key: k })) },
   ];
-  // default pattern A from the design, step numbers count from 1
-  const PATTERN_A = {
-    cow1: [12], cow2: [11, 13], cow3: [4, 9, 15], cow4: [3, 7], cow5: [1, 5],
-    kick: [1, 7, 11], clap: [5, 13], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15], roll: [16], impact: [1],
-    b_root: [1], b_fifth: [11], b_oct: [15], b_glide: [7],
+  // step numbers count from 1. A is the pattern from the design; B–D follow the mood of the
+  // sections of «shiratoki!» (130 BPM, E minor, Em → G → Cmaj7), played with our own sounds
+  const PATTERNS = {
+    A: { name: 'Базовый', notes: {
+      cow1: [12], cow2: [11, 13], cow3: [4, 9, 15], cow4: [3, 7], cow5: [1, 5],
+      kick: [1, 7, 11], clap: [5, 13], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15], roll: [16], impact: [1],
+      b_root: [1], b_fifth: [11], b_oct: [15], b_glide: [7],
+    } },
+    // intro: a lone 8th-note arpeggio, root–fifth–octave over the minor chord, then the relative major
+    B: { name: 'Интро', notes: {
+      cow0: [1, 7], cow3: [3, 11], cow5: [5], cow1: [9, 15], cow4: [13],
+    } },
+    // 0:14: the same arpeggio over a pitch-dropping kick on every beat, doubled by the 808
+    C: { name: 'Бит', notes: {
+      cow0: [1, 7], cow3: [3, 11], cow5: [5], cow1: [9, 15], cow4: [13],
+      kick: [1, 5, 9, 13],
+      b_root: [1, 5, 9], b_glide: [13],
+    } },
+    // drop: four on the floor, 8th hats, claps on 1, 9 and 11, 808 on every beat and a sparse lead
+    D: { name: 'Дроп', notes: {
+      cow5: [1], cow4: [7], cow3: [11], cow1: [14],
+      kick: [1, 5, 9, 13], clap: [1, 9, 11], hat: [1, 3, 5, 7, 9, 11, 13], ohat: [15],
+      b_root: [1, 5], b_fifth: [9], b_glide: [13],
+    } },
   };
-  const pattern = {};
-  SEQ_GROUPS.forEach((g) => g.rows.forEach((r) => { pattern[r.id] = Array.from({ length: STEPS }, (_, s) => (PATTERN_A[r.id] || []).includes(s + 1)); }));
+  // every pattern keeps its own grid, so edits survive switching back and forth
+  const banks = {};
+  Object.entries(PATTERNS).forEach(([k, p]) => {
+    banks[k] = {};
+    SEQ_GROUPS.forEach((g) => g.rows.forEach((r) => { banks[k][r.id] = Array.from({ length: STEPS }, (_, s) => (p.notes[r.id] || []).includes(s + 1)); }));
+  });
+  let current = 'A';
+  let pattern = banks[current];
 
   const seqCols = Array.from({ length: STEPS }, () => []); // every element of a step column, for the playhead
   const isBeat = (s) => s % 4 === 0;
@@ -415,6 +440,17 @@
     const ms = e.target.closest('.seq-mute, .seq-solo');
     if (ms) toggleButton($(ms.classList.contains('seq-mute') ? '.strip-mute' : '.strip-solo', strip(ms.dataset.ch)));
   });
+
+  function selectPattern(k) {
+    current = k;
+    pattern = banks[k];
+    $$('.seq-step').forEach((b) => b.setAttribute('aria-pressed', String(pattern[b.dataset.row][b.dataset.step])));
+    $$('[data-pattern]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pattern === k)));
+    $('#seqPatternKey').textContent = k;
+    $('#seqPatternName').textContent = PATTERNS[k].name;
+  }
+  $$('[data-pattern]').forEach((b) => b.addEventListener('click', () => selectPattern(b.dataset.pattern)));
+  selectPattern('A');
 
   let playhead = 0;
   function setPlayhead(s) {

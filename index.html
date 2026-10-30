@@ -238,9 +238,19 @@
     </svg>
     <div class="seq-cols" id="seqTimeline">
       <div class="seq-info">
-        <span class="seq-pattern">ПАТТЕРН A</span>
+        <span class="seq-pattern" aria-live="polite">ПАТТЕРН <span id="seqPatternKey">A</span> <span class="seq-pattern-name" id="seqPatternName">Базовый</span></span>
         <span class="seq-pos"><b id="seqStepNum">01</b><span>шаг из 16</span></span>
       </div>
+    </div>
+  </div>
+
+  <div class="seq-bar">
+    <span class="seg-label">Паттерн</span>
+    <div class="seg seq-patterns" role="group" aria-label="Паттерн">
+      <button data-pattern="A" aria-pressed="true">A · Базовый</button>
+      <button data-pattern="B" aria-pressed="false">B · Интро</button>
+      <button data-pattern="C" aria-pressed="false">C · Бит</button>
+      <button data-pattern="D" aria-pressed="false">D · Дроп</button>
     </div>
   </div>
 
