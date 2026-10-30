@@ -75,7 +75,7 @@
     const [ch808, meter808] = channel();
     const [chDrums, meterDrums] = channel();
 
-    // cowbell bus
+    // synth bus (the ids stay "cow" from the cowbell days)
     const cowRev = new Tone.Reverb({ decay: 2.5, preDelay: 0.02, wet: 0.35 }).connect(chCow);
     const cowDist = new Tone.Distortion({ distortion: 0.4, wet: 0.6, oversample: '2x' }).connect(cowRev);
     const cowIn = new Tone.Gain(0.55).connect(cowDist);
@@ -83,8 +83,9 @@
     // 808 bus
     const bassFilter = new Tone.Filter({ frequency: 1200, type: 'lowpass', rolloff: -24 }).connect(ch808);
     const bassDist = new Tone.Distortion({ distortion: 0.55, wet: 0.7, oversample: '4x' }).connect(bassFilter);
-    const bass = new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 1.5, oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.4, sustain: 0, release: 0.1 }, volume: -3 }).connect(bassDist);
-    const glide = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.4, sustain: 0, release: 0.1 }, volume: -3 }).connect(bassDist);
+    const bassGrit = new Tone.Distortion({ distortion: 0.35, wet: 0.6, oversample: '2x' }).connect(bassDist);
+    const bass = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2.5, oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.6, sustain: 0, release: 0.1 }, volume: -6.3 }).connect(bassGrit);
+    const glide = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.003, decay: 1.6, sustain: 0, release: 0.1 }, volume: -6.3 }).connect(bassGrit);
 
     // drums bus
     const drumRev = new Tone.Reverb({ decay: 1.2, wet: 0.15 }).connect(chDrums);
@@ -92,7 +93,8 @@
     const crusher = new Tone.WaveShaper(crushCurve(6)).connect(crushMix.b);
     const drumIn = new Tone.Gain(1);
     drumIn.connect(crushMix.a); drumIn.connect(crusher);
-    const kick = new Tone.MembraneSynth({ pitchDecay: 0.06, octaves: 6, envelope: { attack: 0.001, decay: 0.45, sustain: 0, release: 0.05 }, volume: -2 }).connect(drumIn);
+    const kickDrive = new Tone.Distortion({ distortion: 0.3, wet: 0.5 }).connect(drumIn);
+    const kick = new Tone.MembraneSynth({ pitchDecay: 0.09, octaves: 7, envelope: { attack: 0.001, decay: 0.55, sustain: 0, release: 0.05 }, volume: -5.8 }).connect(kickDrive);
     const clapBp = new Tone.Filter({ frequency: 1300, type: 'bandpass', Q: 1.2 }).connect(drumIn);
     const clap = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.14, sustain: 0 }, volume: -4 }).connect(clapBp);
     const hatHp = new Tone.Filter({ frequency: 7000, type: 'highpass' }).connect(drumIn);
@@ -110,15 +112,18 @@
     return A;
   }
 
-  function cowbell(freq, t) {
-    const env = new Tone.AmplitudeEnvelope({ attack: 0.001, decay: 0.32, sustain: 0, release: 0.02 }).connect(A.cowIn);
-    const bp = new Tone.Filter({ frequency: freq * 1.45, type: 'bandpass', Q: 0.9 }).connect(env);
-    const o1 = new Tone.Oscillator(freq, 'square').connect(bp);
-    const o2 = new Tone.Oscillator(freq * 1.48, 'square').connect(bp);
-    o1.volume.value = -8; o2.volume.value = -8;
-    o1.start(t); o2.start(t); env.triggerAttackRelease(0.32, t);
-    o1.stop(t + 0.6); o2.stop(t + 0.6);
-    setTimeout(() => [o1, o2, bp, env].forEach((n) => n.dispose()), 1500);
+  // synth pluck: three detuned saws and a sub triangle, the low-pass closes right after the attack
+  function pluck(freq, t) {
+    const env = new Tone.AmplitudeEnvelope({ attack: 0.004, decay: 0.6, sustain: 0, release: 0.05 }).connect(A.cowIn);
+    const lp = new Tone.Filter({ type: 'lowpass', rolloff: -24, Q: 1.5 }).connect(env);
+    const saw = new Tone.FatOscillator({ frequency: freq, type: 'sawtooth', count: 3, spread: 24 }).connect(lp);
+    const sub = new Tone.Oscillator(freq / 2, 'triangle').connect(lp);
+    saw.volume.value = -3.5; sub.volume.value = -1.5;
+    lp.frequency.setValueAtTime(freq * 9, t);
+    lp.frequency.exponentialRampToValueAtTime(freq * 1.6, t + 0.32);
+    saw.start(t); sub.start(t); env.triggerAttackRelease(0.55, t);
+    saw.stop(t + 0.9); sub.stop(t + 0.9);
+    setTimeout(() => [saw, sub, lp, env].forEach((n) => n.dispose()), 2000);
   }
 
   // a monophonic noise synth needs strictly increasing start times, so keep them apart per synth
@@ -136,7 +141,7 @@
     t = Math.max(t, Tone.context.currentTime + 0.002); // a late event must not land in the past
     if (id.startsWith('cow')) {
       const i = Number(id.slice(3));
-      cowbell(midiToHz(72 + state.key + COW_DEG[i]), t);
+      pluck(midiToHz(60 + state.key + COW_DEG[i]), t);
       return;
     }
     const bassRoot = 36 + state.key;
@@ -341,7 +346,7 @@
   /* ---------- sequencer: 16 steps of 1/16, the loop that ▶ plays ---------- */
   const STEPS = 16;
   const SEQ_GROUPS = [
-    { ch: 'cow', bus: 'bus-cow', title: 'КОВБЕЛЛ', rows: COW_DEG.map((d, i) => ({ id: 'cow' + i, sub: COW_LBL[i], key: COW_KEYS[i] })) },
+    { ch: 'cow', bus: 'bus-cow', title: 'СИНТ', rows: COW_DEG.map((d, i) => ({ id: 'cow' + i, sub: COW_LBL[i], key: COW_KEYS[i] })) },
     { ch: 'drums', bus: 'bus-drums', title: 'УДАРНЫЕ', rows: DRUMS.map(([id, n, k]) => ({ id, name: id === 'ohat' ? 'Откр. хэт' : n, key: k })) },
     { ch: '808', bus: 'bus-808', title: '808', rows: BASS.map(([id, n, k]) => ({ id: 'b_' + id, name: n, key: k })) },
   ];
@@ -399,7 +404,7 @@
     group.dataset.ch = g.ch;
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', g.title);
-    const gen = { cow: 'ковбелл', drums: 'ударные', '808': '808' }[g.ch];
+    const gen = { cow: 'синт', drums: 'ударные', '808': '808' }[g.ch];
     group.innerHTML = `<div class="seq-group-head"><span class="sw"></span><span class="card-title">${g.title}</span>`
       + `<button class="seq-mute" data-ch="${g.ch}" aria-pressed="false" aria-label="Заглушить ${gen}">M</button>`
       + `<button class="seq-solo" data-ch="${g.ch}" aria-pressed="false" aria-label="Соло: ${gen}">S</button></div>`;
@@ -561,7 +566,8 @@
     disp.setAttribute('scale', (380 + lvl * 360).toFixed(0));
     const fx = 0.0035 + Math.sin(ts / 4000) * 0.0005;
     turb.setAttribute('baseFrequency', `${fx.toFixed(5)} 0.011`);
-    const glow = `brightness(${(1 + lvl * 0.6).toFixed(2)}) saturate(${(1 + lvl * 0.5).toFixed(2)})`;
+    // the nebula is pale already, so it brightens less than the old acid one did
+    const glow = `brightness(${(1 + lvl * 0.3).toFixed(2)}) saturate(${(1 + lvl * 0.5).toFixed(2)})`;
     svg.style.filter = glow;
     seqSvg.style.filter = glow;
     seqDisp.setAttribute('scale', (240 + lvl * 220).toFixed(0));
