@@ -9,7 +9,7 @@
 
   // tonality names in the header spell the sharp out
   const KEY_NAMES = ['до', 'до-диез', 'ре', 'ре-диез', 'ми', 'фа', 'фа-диез', 'соль', 'соль-диез', 'ля', 'ля-диез', 'си'];
-  const state = { bpm: 130, vol: 80, key: 3, glide: 0.25 }; // D# minor
+  const state = { bpm: 130, vol: 34, key: 3, glide: 0.25 }; // D# minor, master at −9.4 dB
   const midiToHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   const pct = (el) => Number(el.value) / 100;
   const $ = (s, r = document) => r.querySelector(s);
